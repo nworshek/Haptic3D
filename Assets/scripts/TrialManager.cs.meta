@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: bc80870c98a9c47f384c689ace2c379b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - flatCube: {instanceID: 0}
+  - ridgeCube: {instanceID: 0}
+  - bumpCube: {instanceID: 0}
+  - currentHapticObject: {instanceID: 0}
+  - blackBox: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
