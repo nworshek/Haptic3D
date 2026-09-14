@@ -11,6 +11,11 @@ public class SimulatedFingertipController : MonoBehaviour
     public float minDistance = 0.15f;
     public float maxDistance = 1.0f;
 
+    [Header("Fingertips")]
+    public Transform indexFingertip;
+    public Transform middleFingertip;
+    public Transform ringFingertip;
+
     [Header("Collision")]
     public float collisionRadius = 0.010f;
     public float skinWidth = 0.001f;
@@ -22,176 +27,295 @@ public class SimulatedFingertipController : MonoBehaviour
     private Vector3 startCameraRelativePosition;
     private Vector3 inputMovement;
 
+
+    // =========================================================
+    // START
+    // =========================================================
+
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        rb =
+            GetComponent<Rigidbody>();
 
         if (rb == null)
         {
             Debug.LogError(
-                "SimulatedFingertipController: Rigidbody is missing."
+                "SimulatedFingertipController: " +
+                "FingertipManager Rigidbody is missing."
             );
 
-            enabled = false;
+            enabled =
+                false;
+
             return;
         }
 
         if (Camera.main == null)
         {
             Debug.LogError(
-                "SimulatedFingertipController: Main Camera could not be found."
+                "SimulatedFingertipController: " +
+                "Main Camera could not be found."
             );
 
-            enabled = false;
+            enabled =
+                false;
+
             return;
         }
 
-        cameraTransform = Camera.main.transform;
+        if (
+            indexFingertip == null ||
+            middleFingertip == null ||
+            ringFingertip == null
+        )
+        {
+            Debug.LogError(
+                "SimulatedFingertipController: " +
+                "Index, Middle, and Ring fingertips " +
+                "must all be assigned."
+            );
 
-        // Save initial fingertip position relative to the camera.
+            enabled =
+                false;
+
+            return;
+        }
+
+        cameraTransform =
+            Camera.main.transform;
+
+        // Save the initial position of the entire
+        // hand relative to the camera.
         startCameraRelativePosition =
             cameraTransform.InverseTransformPoint(
                 rb.position
             );
     }
 
+
+    // =========================================================
+    // UPDATE
+    // =========================================================
+
     void Update()
     {
         ReadInput();
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (
+            Input.GetKeyDown(
+                KeyCode.R
+            )
+        )
         {
             ResetFingertip();
         }
     }
 
+
+    // =========================================================
+    // FIXED UPDATE
+    // =========================================================
+
     void FixedUpdate()
     {
-        MoveFingertip();
+        MoveHand();
     }
+
+
+    // =========================================================
+    // INPUT
+    // =========================================================
 
     private void ReadInput()
     {
-        inputMovement = Vector3.zero;
+        inputMovement =
+            Vector3.zero;
 
-        // Left / Right
-        if (Input.GetKey(KeyCode.LeftArrow))
+
+        // Left
+        if (
+            Input.GetKey(
+                KeyCode.LeftArrow
+            )
+        )
         {
-            inputMovement.x -= 1f;
+            inputMovement.x -=
+                1f;
         }
 
-        if (Input.GetKey(KeyCode.RightArrow))
+
+        // Right
+        if (
+            Input.GetKey(
+                KeyCode.RightArrow
+            )
+        )
         {
-            inputMovement.x += 1f;
+            inputMovement.x +=
+                1f;
         }
 
-        // Up / Down
-        if (Input.GetKey(KeyCode.UpArrow))
+
+        // Up
+        if (
+            Input.GetKey(
+                KeyCode.UpArrow
+            )
+        )
         {
-            inputMovement.y += 1f;
+            inputMovement.y +=
+                1f;
         }
 
-        if (Input.GetKey(KeyCode.DownArrow))
+
+        // Down
+        if (
+            Input.GetKey(
+                KeyCode.DownArrow
+            )
+        )
         {
-            inputMovement.y -= 1f;
+            inputMovement.y -=
+                1f;
         }
 
-        // Forward / Back
-        if (Input.GetKey(KeyCode.RightBracket))
+
+        // Forward
+        if (
+            Input.GetKey(
+                KeyCode.RightBracket
+            )
+        )
         {
-            inputMovement.z += 1f;
+            inputMovement.z +=
+                1f;
         }
 
-        if (Input.GetKey(KeyCode.LeftBracket))
+
+        // Back
+        if (
+            Input.GetKey(
+                KeyCode.LeftBracket
+            )
+        )
         {
-            inputMovement.z -= 1f;
+            inputMovement.z -=
+                1f;
         }
+
 
         inputMovement =
             inputMovement.normalized;
     }
 
-    private void MoveFingertip()
+
+    // =========================================================
+    // MOVE ENTIRE HAND
+    // =========================================================
+
+    private void MoveHand()
     {
         if (cameraTransform == null)
         {
             return;
         }
 
-        // Convert keyboard input into movement relative
-        // to the direction the camera is facing.
+
+        // Convert keyboard movement into camera-relative
+        // world-space movement.
         Vector3 worldMovement =
             cameraTransform.right *
             inputMovement.x *
             horizontalSpeed;
+
 
         worldMovement +=
             cameraTransform.up *
             inputMovement.y *
             verticalSpeed;
 
+
         worldMovement +=
             cameraTransform.forward *
             inputMovement.z *
             depthSpeed;
 
+
         Vector3 movementStep =
             worldMovement *
             Time.fixedDeltaTime;
 
-        if (movementStep.sqrMagnitude <= 0f)
+
+        if (
+            movementStep.sqrMagnitude <=
+            0f
+        )
         {
             return;
         }
 
+
         Vector3 direction =
             movementStep.normalized;
 
-        float distance =
+
+        float requestedDistance =
             movementStep.magnitude;
 
-        RaycastHit hit;
 
-        bool blocked =
-            Physics.SphereCast(
-                rb.position,
-                collisionRadius,
-                direction,
-                out hit,
-                distance + skinWidth,
-                fingertipCollisionLayers,
-                QueryTriggerInteraction.Ignore
+        // Check all fingertips.
+        // The closest collision controls how far
+        // the entire hand is allowed to move.
+        float allowedDistance =
+            requestedDistance;
+
+
+        allowedDistance =
+            Mathf.Min(
+                allowedDistance,
+                GetAllowedDistance(
+                    indexFingertip,
+                    direction,
+                    requestedDistance
+                )
             );
 
-        Vector3 targetPosition;
 
-        if (blocked)
-        {
-            float allowedDistance =
-                Mathf.Max(
-                    0f,
-                    hit.distance -
-                    skinWidth
-                );
+        allowedDistance =
+            Mathf.Min(
+                allowedDistance,
+                GetAllowedDistance(
+                    middleFingertip,
+                    direction,
+                    requestedDistance
+                )
+            );
 
-            targetPosition =
-                rb.position +
-                direction *
-                allowedDistance;
-        }
-        else
-        {
-            targetPosition =
-                rb.position +
-                movementStep;
-        }
 
-        // Keep fingertip within allowed distance
-        // from the camera.
+        allowedDistance =
+            Mathf.Min(
+                allowedDistance,
+                GetAllowedDistance(
+                    ringFingertip,
+                    direction,
+                    requestedDistance
+                )
+            );
+
+
+        Vector3 targetPosition =
+            rb.position +
+            direction *
+            allowedDistance;
+
+
+        // Keep the whole hand within its allowed
+        // depth range from the camera.
         Vector3 cameraRelativePosition =
             cameraTransform.InverseTransformPoint(
                 targetPosition
             );
+
 
         cameraRelativePosition.z =
             Mathf.Clamp(
@@ -200,15 +324,73 @@ public class SimulatedFingertipController : MonoBehaviour
                 maxDistance
             );
 
+
         targetPosition =
             cameraTransform.TransformPoint(
                 cameraRelativePosition
             );
 
+
         rb.MovePosition(
             targetPosition
         );
     }
+
+
+    // =========================================================
+    // CHECK ONE FINGERTIP
+    // =========================================================
+
+    private float GetAllowedDistance(
+        Transform fingertip,
+        Vector3 direction,
+        float requestedDistance
+    )
+    {
+        if (fingertip == null)
+        {
+            return requestedDistance;
+        }
+
+
+        RaycastHit hit;
+
+
+        bool blocked =
+            Physics.SphereCast(
+                fingertip.position,
+                collisionRadius,
+                direction,
+                out hit,
+                requestedDistance +
+                skinWidth,
+                fingertipCollisionLayers,
+                QueryTriggerInteraction.Ignore
+            );
+
+
+        if (!blocked)
+        {
+            return requestedDistance;
+        }
+
+
+        float allowedDistance =
+            Mathf.Max(
+                0f,
+                hit.distance -
+                skinWidth
+            );
+
+
+        return
+            allowedDistance;
+    }
+
+
+    // =========================================================
+    // RESET ENTIRE HAND
+    // =========================================================
 
     public void ResetFingertip()
     {
@@ -217,16 +399,20 @@ public class SimulatedFingertipController : MonoBehaviour
             return;
         }
 
+
         Vector3 resetPosition =
             cameraTransform.TransformPoint(
                 startCameraRelativePosition
             );
 
+
         rb.position =
             resetPosition;
 
+
         rb.velocity =
             Vector3.zero;
+
 
         rb.angularVelocity =
             Vector3.zero;

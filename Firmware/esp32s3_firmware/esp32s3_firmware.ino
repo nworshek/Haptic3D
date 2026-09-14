@@ -12,11 +12,10 @@
 // PCA9685 I2C address
 #define PCA_ADDRESS 0x40
 
-// Motor is connected to PCA9685 LED0
-// PCA channels are numbered starting at 0:
-// LED0 = 0
-// LED1 = 1
-#define MOTOR_CHANNEL 0
+// Motor channel mapping
+#define INDEX_CHANNEL 0
+#define MIDDLE_CHANNEL 2
+#define RING_CHANNEL 15
 
 // PCA9685 PWM frequency
 #define PWM_FREQUENCY 1000
@@ -33,8 +32,13 @@ Adafruit_PWMServoDriver pwm =
     Adafruit_PWMServoDriver(PCA_ADDRESS);
 
 
-// Store current motor intensity
-int currentIntensity = 0;
+// ============================================================
+// MOTOR STATUS
+// ============================================================
+
+int indexIntensity = 0;
+int middleIntensity = 0;
+int ringIntensity = 0;
 
 
 // ============================================================
@@ -43,20 +47,24 @@ int currentIntensity = 0;
 
 void setup()
 {
-    // Start USB serial communication
     Serial.begin(SERIAL_BAUD);
 
     delay(1000);
 
     Serial.println();
-    Serial.println("ESP32S3 Haptic Controller Starting...");
+    Serial.println(
+        "ESP32S3 Haptic Controller Starting..."
+    );
 
 
     // --------------------------------------------------------
     // Start I2C
     // --------------------------------------------------------
 
-    Wire.begin(SDA_PIN, SCL_PIN);
+    Wire.begin(
+        SDA_PIN,
+        SCL_PIN
+    );
 
 
     // --------------------------------------------------------
@@ -65,19 +73,34 @@ void setup()
 
     pwm.begin();
 
-    pwm.setPWMFreq(PWM_FREQUENCY);
+    pwm.setPWMFreq(
+        PWM_FREQUENCY
+    );
 
     delay(10);
 
 
     // --------------------------------------------------------
-    // Start with motor OFF
+    // Start with all motors OFF
     // --------------------------------------------------------
 
-    motorOff();
+    allMotorsOff();
 
-    Serial.println("Motor Channel: LED0");
-    Serial.println("READY");
+    Serial.println(
+        "M1 = Index  -> LED0"
+    );
+
+    Serial.println(
+        "M2 = Middle -> LED2"
+    );
+
+    Serial.println(
+        "M3 = Ring   -> LED15"
+    );
+
+    Serial.println(
+        "READY"
+    );
 }
 
 
@@ -96,7 +119,9 @@ void loop()
 
         if (command.length() > 0)
         {
-            processCommand(command);
+            processCommand(
+                command
+            );
         }
     }
 }
@@ -106,10 +131,10 @@ void loop()
 // COMMAND PROCESSING
 // ============================================================
 
-void processCommand(String command)
+void processCommand(
+    String command
+)
 {
-    // Convert command to uppercase
-    // Makes commands like "off" and "OFF" both work
     command.toUpperCase();
 
 
@@ -119,20 +144,26 @@ void processCommand(String command)
 
     if (command == "PING")
     {
-        Serial.println("PONG");
+        Serial.println(
+            "PONG"
+        );
+
         return;
     }
 
 
     // --------------------------------------------------------
-    // OFF
+    // ALL MOTORS OFF
     // --------------------------------------------------------
 
     if (command == "OFF")
     {
-        motorOff();
+        allMotorsOff();
 
-        Serial.println("OK:OFF");
+        Serial.println(
+            "OK:OFF"
+        );
+
         return;
     }
 
@@ -143,39 +174,140 @@ void processCommand(String command)
 
     if (command == "STATUS")
     {
-        Serial.print("STATUS:M1=");
-        Serial.println(currentIntensity);
+        Serial.print(
+            "STATUS:M1="
+        );
+
+        Serial.print(
+            indexIntensity
+        );
+
+        Serial.print(
+            ",M2="
+        );
+
+        Serial.print(
+            middleIntensity
+        );
+
+        Serial.print(
+            ",M3="
+        );
+
+        Serial.println(
+            ringIntensity
+        );
 
         return;
     }
 
 
     // --------------------------------------------------------
-    // MOTOR COMMAND
-    //
-    // Examples:
-    //
-    // M1:25
-    // M1:50
-    // M1:100
-    //
+    // MOTOR 1 - INDEX
     // --------------------------------------------------------
 
     if (command.startsWith("M1:"))
     {
-        String intensityText =
-            command.substring(3);
-
         int intensity =
-            intensityText.toInt();
+            command.substring(3)
+            .toInt();
 
         intensity =
-            constrain(intensity, 0, 100);
+            constrain(
+                intensity,
+                0,
+                100
+            );
 
-        setMotorIntensity(intensity);
+        setMotorIntensity(
+            INDEX_CHANNEL,
+            intensity
+        );
 
-        Serial.print("OK:M1:");
-        Serial.println(intensity);
+        indexIntensity =
+            intensity;
+
+        Serial.print(
+            "OK:M1:"
+        );
+
+        Serial.println(
+            intensity
+        );
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // MOTOR 2 - MIDDLE
+    // --------------------------------------------------------
+
+    if (command.startsWith("M2:"))
+    {
+        int intensity =
+            command.substring(3)
+            .toInt();
+
+        intensity =
+            constrain(
+                intensity,
+                0,
+                100
+            );
+
+        setMotorIntensity(
+            MIDDLE_CHANNEL,
+            intensity
+        );
+
+        middleIntensity =
+            intensity;
+
+        Serial.print(
+            "OK:M2:"
+        );
+
+        Serial.println(
+            intensity
+        );
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // MOTOR 3 - RING
+    // --------------------------------------------------------
+
+    if (command.startsWith("M3:"))
+    {
+        int intensity =
+            command.substring(3)
+            .toInt();
+
+        intensity =
+            constrain(
+                intensity,
+                0,
+                100
+            );
+
+        setMotorIntensity(
+            RING_CHANNEL,
+            intensity
+        );
+
+        ringIntensity =
+            intensity;
+
+        Serial.print(
+            "OK:M3:"
+        );
+
+        Serial.println(
+            intensity
+        );
 
         return;
     }
@@ -185,8 +317,13 @@ void processCommand(String command)
     // UNKNOWN COMMAND
     // --------------------------------------------------------
 
-    Serial.print("ERROR:UNKNOWN_COMMAND:");
-    Serial.println(command);
+    Serial.print(
+        "ERROR:UNKNOWN_COMMAND:"
+    );
+
+    Serial.println(
+        command
+    );
 }
 
 
@@ -194,51 +331,55 @@ void processCommand(String command)
 // MOTOR INTENSITY CONTROL
 // ============================================================
 
-void setMotorIntensity(int intensity)
+void setMotorIntensity(
+    int channel,
+    int intensity
+)
 {
-    // Limit intensity to 0-100%
     intensity =
-        constrain(intensity, 0, 100);
-
-    currentIntensity = intensity;
+        constrain(
+            intensity,
+            0,
+            100
+        );
 
 
     // --------------------------------------------------------
-    // 0% = Motor OFF
+    // 0% = OFF
     // --------------------------------------------------------
 
     if (intensity == 0)
     {
-        motorOff();
+        motorOff(
+            channel
+        );
+
         return;
     }
 
 
     // --------------------------------------------------------
-    // 100% = Motor fully ON
+    // 100% = FULL ON
     // --------------------------------------------------------
 
     if (intensity == 100)
     {
-        motorFullOn();
+        motorFullOn(
+            channel
+        );
+
         return;
     }
 
 
     /*
-        ACTIVE-LOW MOTOR CONFIGURATION
+        ACTIVE-LOW CONFIGURATION
 
-        PCA9685 HIGH  -> Motor OFF
-        PCA9685 LOW   -> Motor ON
+        HIGH = motor OFF
+        LOW  = motor ON
 
-        Therefore:
-
-        0% intensity   = output mostly HIGH
-        100% intensity = output mostly LOW
-
-        PCA9685 PWM range:
-
-        0 - 4095
+        0% intensity   = mostly HIGH
+        100% intensity = mostly LOW
     */
 
     int pwmValue =
@@ -252,7 +393,7 @@ void setMotorIntensity(int intensity)
 
 
     pwm.setPWM(
-        MOTOR_CHANNEL,
+        channel,
         0,
         pwmValue
     );
@@ -260,22 +401,22 @@ void setMotorIntensity(int intensity)
 
 
 // ============================================================
-// MOTOR OFF
+// TURN OFF ONE MOTOR
 // ============================================================
 
-void motorOff()
+void motorOff(
+    int channel
+)
 {
-    currentIntensity = 0;
-
     /*
-        Force PCA9685 LED0 output HIGH.
+        Force output HIGH.
 
-        Active-low configuration:
+        Active-low:
         HIGH = motor OFF
     */
 
     pwm.setPWM(
-        MOTOR_CHANNEL,
+        channel,
         4096,
         0
     );
@@ -283,23 +424,47 @@ void motorOff()
 
 
 // ============================================================
-// MOTOR FULL ON
+// FULL ON ONE MOTOR
 // ============================================================
 
-void motorFullOn()
+void motorFullOn(
+    int channel
+)
 {
-    currentIntensity = 100;
-
     /*
-        Force PCA9685 LED0 output LOW.
+        Force output LOW.
 
-        Active-low configuration:
+        Active-low:
         LOW = motor ON
     */
 
     pwm.setPWM(
-        MOTOR_CHANNEL,
+        channel,
         0,
         4096
+    );
+}
+
+
+// ============================================================
+// TURN ALL MOTORS OFF
+// ============================================================
+
+void allMotorsOff()
+{
+    indexIntensity = 0;
+    middleIntensity = 0;
+    ringIntensity = 0;
+
+    motorOff(
+        INDEX_CHANNEL
+    );
+
+    motorOff(
+        MIDDLE_CHANNEL
+    );
+
+    motorOff(
+        RING_CHANNEL
     );
 }

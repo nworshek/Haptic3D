@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.4465781, g: 0.49641192, b: 0.574816, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1011,7 +1011,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &235134135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1135,10 +1135,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b894672ca1e50462ab9a35e8b9441389, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  portName: /dev/cu.usbmodem101
+  portName: COM3
   baudRate: 115200
   connectOnStart: 1
-  currentIntensity: 0
+  indexIntensity: 0
+  middleIntensity: 0
+  ringIntensity: 0
 --- !u!4 &270960426
 Transform:
   m_ObjectHideFlags: 0
@@ -1441,10 +1443,9 @@ GameObject:
   - component: {fileID: 660913811}
   - component: {fileID: 660913810}
   - component: {fileID: 660913809}
-  - component: {fileID: 660913808}
   - component: {fileID: 660913807}
   - component: {fileID: 660913806}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: SimulatedFingertipMiddle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1463,6 +1464,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbdc279040536410da354f42e6b19e7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  finger: 1
   esp32Serial: {fileID: 270960425}
   currentObject: {fileID: 0}
   detectionRadius: 0.02
@@ -1481,7 +1483,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 660913805}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 37b3bcacf3db44f55a8c0e92480451f6, type: 3}
   m_Name: 
@@ -1491,27 +1493,14 @@ MonoBehaviour:
   depthSpeed: 0.25
   minDistance: 0.15
   maxDistance: 1
+  indexFingertip: {fileID: 0}
+  middleFingertip: {fileID: 0}
+  ringFingertip: {fileID: 0}
   collisionRadius: 0.012
   skinWidth: 0.002
   fingertipCollisionLayers:
     serializedVersion: 2
     m_Bits: 55
---- !u!54 &660913808
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 660913805}
-  serializedVersion: 2
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 3
 --- !u!135 &660913809
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1899,10 +1888,9 @@ GameObject:
   - component: {fileID: 771516077}
   - component: {fileID: 771516076}
   - component: {fileID: 771516075}
-  - component: {fileID: 771516074}
   - component: {fileID: 771516073}
   - component: {fileID: 771516072}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: SimulatedFingertipIndex
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1935,6 +1923,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbdc279040536410da354f42e6b19e7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  finger: 0
   esp32Serial: {fileID: 270960425}
   currentObject: {fileID: 0}
   detectionRadius: 0.02
@@ -1953,7 +1942,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 771516070}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 37b3bcacf3db44f55a8c0e92480451f6, type: 3}
   m_Name: 
@@ -1963,27 +1952,14 @@ MonoBehaviour:
   depthSpeed: 0.25
   minDistance: 0.15
   maxDistance: 1
+  indexFingertip: {fileID: 0}
+  middleFingertip: {fileID: 0}
+  ringFingertip: {fileID: 0}
   collisionRadius: 0.012
   skinWidth: 0.002
   fingertipCollisionLayers:
     serializedVersion: 2
     m_Bits: 55
---- !u!54 &771516074
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 771516070}
-  serializedVersion: 2
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 3
 --- !u!135 &771516075
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -2148,10 +2124,9 @@ GameObject:
   - component: {fileID: 861741999}
   - component: {fileID: 861741998}
   - component: {fileID: 861741997}
-  - component: {fileID: 861741996}
   - component: {fileID: 861741995}
   - component: {fileID: 861741994}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: SimulatedFingertipRing
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2170,6 +2145,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bbdc279040536410da354f42e6b19e7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  finger: 2
   esp32Serial: {fileID: 270960425}
   currentObject: {fileID: 0}
   detectionRadius: 0.02
@@ -2188,7 +2164,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 861741993}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 37b3bcacf3db44f55a8c0e92480451f6, type: 3}
   m_Name: 
@@ -2198,27 +2174,14 @@ MonoBehaviour:
   depthSpeed: 0.25
   minDistance: 0.15
   maxDistance: 1
+  indexFingertip: {fileID: 0}
+  middleFingertip: {fileID: 0}
+  ringFingertip: {fileID: 0}
   collisionRadius: 0.012
   skinWidth: 0.002
   fingertipCollisionLayers:
     serializedVersion: 2
     m_Bits: 55
---- !u!54 &861741996
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 861741993}
-  serializedVersion: 2
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 3
 --- !u!135 &861741997
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -2582,6 +2545,52 @@ MonoBehaviour:
   m_TrackingType: 0
   m_UpdateType: 0
   m_UseRelativeTransform: 0
+--- !u!1 &985146662
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 985146664}
+  - component: {fileID: 985146663}
+  m_Layer: 0
+  m_Name: ExperimentTCPServer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &985146663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 985146662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01134d9ff5b4844428d9a49f5fda7558, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  experimentController: {fileID: 1196032394}
+  esp32Serial: {fileID: 270960425}
+  port: 5055
+--- !u!4 &985146664
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 985146662}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 9.460027, y: -6.9104495, z: 17.45962}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 11
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1002590453
 GameObject:
   m_ObjectHideFlags: 0
@@ -4276,6 +4285,181 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2031453650}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &2083025747
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2083025748}
+  - component: {fileID: 2083025755}
+  - component: {fileID: 2083025754}
+  - component: {fileID: 2083025753}
+  - component: {fileID: 2083025752}
+  - component: {fileID: 2083025751}
+  - component: {fileID: 2083025750}
+  - component: {fileID: 2083025749}
+  m_Layer: 0
+  m_Name: SimulatedFingertipPinky
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &2083025748
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.066, y: -0.009, z: 0}
+  m_LocalScale: {x: 0.025, y: 0.025, z: 0.025}
+  m_Children: []
+  m_Father: {fileID: 2101888944}
+  m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2083025749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbdc279040536410da354f42e6b19e7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  finger: 0
+  esp32Serial: {fileID: 270960425}
+  currentObject: {fileID: 0}
+  detectionRadius: 0.02
+  idleMaterial: {fileID: 2100000, guid: a0de5ec4c407941f7aafbb5ea84db24d, type: 2}
+  contactMaterial: {fileID: 2100000, guid: 9bc306b10544c44dbabe11ea89d243ec, type: 2}
+  hapticUpdateRate: 0.05
+  minimumIntensityChange: 2
+  minimumPulseSpeed: 2
+  maximumPulseSpeed: 10
+  minimumPulseAmount: 0.02
+  maximumPulseAmount: 0.2
+--- !u!114 &2083025750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37b3bcacf3db44f55a8c0e92480451f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  horizontalSpeed: 0.25
+  verticalSpeed: 0.25
+  depthSpeed: 0.25
+  minDistance: 0.15
+  maxDistance: 1
+  indexFingertip: {fileID: 0}
+  middleFingertip: {fileID: 0}
+  ringFingertip: {fileID: 0}
+  collisionRadius: 0.012
+  skinWidth: 0.002
+  fingertipCollisionLayers:
+    serializedVersion: 2
+    m_Bits: 55
+--- !u!54 &2083025751
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  serializedVersion: 2
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 3
+--- !u!135 &2083025752
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!135 &2083025753
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.45
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!23 &2083025754
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+--- !u!33 &2083025755
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2083025747}
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &2087921709
 GameObject:
   m_ObjectHideFlags: 0
@@ -4441,6 +4625,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2101888944}
+  - component: {fileID: 2101888946}
+  - component: {fileID: 2101888945}
   m_Layer: 0
   m_Name: FingertipManager
   m_TagString: Untagged
@@ -4462,6 +4648,48 @@ Transform:
   - {fileID: 771516071}
   - {fileID: 660913813}
   - {fileID: 861742001}
+  - {fileID: 2083025748}
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2101888945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2101888943}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37b3bcacf3db44f55a8c0e92480451f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  horizontalSpeed: 0.5
+  verticalSpeed: 0.5
+  depthSpeed: 0.5
+  minDistance: 0.15
+  maxDistance: 1
+  indexFingertip: {fileID: 771516071}
+  middleFingertip: {fileID: 660913813}
+  ringFingertip: {fileID: 861742001}
+  collisionRadius: 0.01
+  skinWidth: 0.001
+  fingertipCollisionLayers:
+    serializedVersion: 2
+    m_Bits: 55
+--- !u!54 &2101888946
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2101888943}
+  serializedVersion: 2
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
+  m_Constraints: 0
+  m_CollisionDetection: 3

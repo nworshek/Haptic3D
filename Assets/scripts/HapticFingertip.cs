@@ -2,6 +2,16 @@
 
 public class HapticFingertip : MonoBehaviour
 {
+    public enum FingerType
+    {
+        Index,
+        Middle,
+        Ring
+    }
+
+    [Header("Finger")]
+    public FingerType finger = FingerType.Index;
+
     [Header("ESP32 Connection")]
     public ESP32Serial esp32Serial;
 
@@ -36,6 +46,43 @@ public class HapticFingertip : MonoBehaviour
     private TrialManager trialManager;
 
 
+    // =========================================================
+    // MOTOR NUMBER
+    // =========================================================
+
+    public int GetMotorNumber()
+    {
+        switch (finger)
+        {
+            case FingerType.Index:
+                return 1;
+
+            case FingerType.Middle:
+                return 2;
+
+            case FingerType.Ring:
+                return 3;
+
+            default:
+                return 1;
+        }
+    }
+
+
+    // =========================================================
+    // MOTOR LABEL
+    // =========================================================
+
+    private string GetMotorLabel()
+    {
+        return "M" + GetMotorNumber();
+    }
+
+
+    // =========================================================
+    // START
+    // =========================================================
+
     void Start()
     {
         fingertipRenderer =
@@ -68,8 +115,20 @@ public class HapticFingertip : MonoBehaviour
                 "HapticFingertip: TrialManager could not be found."
             );
         }
+
+        Debug.Log(
+            gameObject.name +
+            " configured as " +
+            finger +
+            " | Motor " +
+            GetMotorLabel()
+        );
     }
 
+
+    // =========================================================
+    // UPDATE
+    // =========================================================
 
     void Update()
     {
@@ -120,7 +179,6 @@ public class HapticFingertip : MonoBehaviour
             }
         }
 
-        // No haptic surface nearby.
         if (detectedObject == null)
         {
             if (isTouching &&
@@ -132,7 +190,6 @@ public class HapticFingertip : MonoBehaviour
             return;
         }
 
-        // New haptic object detected.
         if (detectedObject != currentObject)
         {
             if (isTouching &&
@@ -170,7 +227,8 @@ public class HapticFingertip : MonoBehaviour
         SetContactVisual();
 
         Debug.Log(
-            "HAPTIC SURFACE DETECTED: " +
+            finger +
+            " CONTACT START: " +
             currentObject.gameObject.name
         );
 
@@ -179,7 +237,10 @@ public class HapticFingertip : MonoBehaviour
             TrialLogger.Instance.LogEvent(
                 GetCurrentTrialState(),
                 currentObject.gameObject.name,
-                "Contact Start"
+                "Contact Start",
+                -1,
+                finger.ToString(),
+                GetMotorLabel()
             );
         }
 
@@ -205,7 +266,9 @@ public class HapticFingertip : MonoBehaviour
 
         if (esp32Serial != null)
         {
-            esp32Serial.MotorOff();
+            esp32Serial.MotorOff(
+                GetMotorNumber()
+            );
         }
 
         if (TrialLogger.Instance != null)
@@ -213,12 +276,16 @@ public class HapticFingertip : MonoBehaviour
             TrialLogger.Instance.LogEvent(
                 GetCurrentTrialState(),
                 objectName,
-                "Contact End"
+                "Contact End",
+                -1,
+                finger.ToString(),
+                GetMotorLabel()
             );
         }
 
         Debug.Log(
-            "HAPTIC SURFACE ENDED: " +
+            finger +
+            " CONTACT END: " +
             objectName
         );
 
@@ -282,6 +349,7 @@ public class HapticFingertip : MonoBehaviour
         }
 
         esp32Serial.SetMotorIntensity(
+            GetMotorNumber(),
             newIntensity
         );
 
@@ -291,7 +359,9 @@ public class HapticFingertip : MonoBehaviour
                 GetCurrentTrialState(),
                 currentObject.gameObject.name,
                 "Haptic Update",
-                newIntensity
+                newIntensity,
+                finger.ToString(),
+                GetMotorLabel()
             );
         }
 
@@ -405,7 +475,9 @@ public class HapticFingertip : MonoBehaviour
     {
         if (esp32Serial != null)
         {
-            esp32Serial.MotorOff();
+            esp32Serial.MotorOff(
+                GetMotorNumber()
+            );
         }
 
         currentObject =

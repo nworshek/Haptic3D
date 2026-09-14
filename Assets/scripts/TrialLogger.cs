@@ -22,6 +22,14 @@ public class TrialLogger : MonoBehaviour
     private string sessionFolder;
     private string filePath;
 
+    private float trialStartTime = 0f;
+    private bool trialTimerRunning = false;
+
+
+    // =========================================================
+    // AWAKE
+    // =========================================================
+
     void Awake()
     {
         if (Instance == null)
@@ -37,6 +45,7 @@ public class TrialLogger : MonoBehaviour
         CreateSessionFolder();
         CreateLogFile();
     }
+
 
     // =========================================================
     // SESSION SETUP
@@ -76,6 +85,7 @@ public class TrialLogger : MonoBehaviour
         );
     }
 
+
     // =========================================================
     // LOG FILE SETUP
     // =========================================================
@@ -89,15 +99,17 @@ public class TrialLogger : MonoBehaviour
             );
 
         string header =
-            "SessionID," +
-            "ParticipantID," +
-            "TrialNumber," +
-            "Timestamp," +
-            "ElapsedTime," +
-            "TrialState," +
+            "Session ID," +
+            "Participant ID," +
+            "Trial Number," +
+            "Time," +
+            "Elapsed Time (s)," +
+            "Condition," +
             "Stimulus," +
             "Event," +
-            "HapticIntensity\n";
+            "Finger," +
+            "Motor," +
+            "Motor Intensity (%)\n";
 
         File.WriteAllText(
             filePath,
@@ -110,11 +122,14 @@ public class TrialLogger : MonoBehaviour
         );
     }
 
+
     // =========================================================
     // PARTICIPANT
     // =========================================================
 
-    public void SetParticipantID(string id)
+    public void SetParticipantID(
+        string id
+    )
     {
         if (string.IsNullOrEmpty(id))
         {
@@ -122,7 +137,8 @@ public class TrialLogger : MonoBehaviour
             return;
         }
 
-        participantID = id.Trim();
+        participantID =
+            id.Trim();
 
         Debug.Log(
             "Participant ID set to: " +
@@ -130,10 +146,12 @@ public class TrialLogger : MonoBehaviour
         );
     }
 
+
     public string GetParticipantID()
     {
         return participantID;
     }
+
 
     // =========================================================
     // TRIAL CONTROL
@@ -145,6 +163,12 @@ public class TrialLogger : MonoBehaviour
     )
     {
         currentTrialNumber++;
+
+        trialStartTime =
+            Time.time;
+
+        trialTimerRunning =
+            true;
 
         LogEvent(
             trialState,
@@ -158,12 +182,17 @@ public class TrialLogger : MonoBehaviour
             " STARTED" +
             " | Participant: " +
             participantID +
-            " | State: " +
-            trialState +
+            " | Condition: " +
+            GetReadableCondition(
+                trialState
+            ) +
             " | Stimulus: " +
-            stimulus
+            GetReadableStimulus(
+                stimulus
+            )
         );
     }
+
 
     public void EndCurrentTrial(
         string trialState,
@@ -181,6 +210,9 @@ public class TrialLogger : MonoBehaviour
             "Trial Ended"
         );
 
+        trialTimerRunning =
+            false;
+
         Debug.Log(
             "TRIAL " +
             currentTrialNumber +
@@ -188,8 +220,19 @@ public class TrialLogger : MonoBehaviour
         );
     }
 
+
     // =========================================================
-    // EVENT LOGGING
+    // STANDARD EVENT LOGGING
+    // =========================================================
+    //
+    // Existing scripts can continue calling:
+    //
+    // LogEvent(state, stimulus, event);
+    //
+    // or:
+    //
+    // LogEvent(state, stimulus, event, intensity);
+    //
     // =========================================================
 
     public void LogEvent(
@@ -197,6 +240,43 @@ public class TrialLogger : MonoBehaviour
         string stimulus,
         string eventType,
         int intensity = -1
+    )
+    {
+        LogEvent(
+            trialState,
+            stimulus,
+            eventType,
+            intensity,
+            "",
+            ""
+        );
+    }
+
+
+    // =========================================================
+    // MULTI-FINGER EVENT LOGGING
+    // =========================================================
+    //
+    // Example:
+    //
+    // LogEvent(
+    //     state,
+    //     stimulus,
+    //     "Haptic Update",
+    //     55,
+    //     "Middle",
+    //     "M2"
+    // );
+    //
+    // =========================================================
+
+    public void LogEvent(
+        string trialState,
+        string stimulus,
+        string eventType,
+        int intensity,
+        string finger,
+        string motor
     )
     {
         if (!enableLogging)
@@ -209,30 +289,173 @@ public class TrialLogger : MonoBehaviour
                 "HH:mm:ss.fff"
             );
 
+
+        // -----------------------------------------------------
+        // TRIAL ELAPSED TIME
+        // -----------------------------------------------------
+
+        float elapsed =
+            0f;
+
+        if (trialTimerRunning)
+        {
+            elapsed =
+                Time.time -
+                trialStartTime;
+        }
+
         string elapsedTime =
-            Time.time.ToString("F3");
+            elapsed.ToString(
+                "F3"
+            );
+
+
+        // -----------------------------------------------------
+        // MOTOR INTENSITY
+        // -----------------------------------------------------
 
         string intensityText =
             intensity >= 0
             ? intensity.ToString()
             : "";
 
+
+        // -----------------------------------------------------
+        // READABLE LABELS
+        // -----------------------------------------------------
+
+        string readableCondition =
+            GetReadableCondition(
+                trialState
+            );
+
+        string readableStimulus =
+            GetReadableStimulus(
+                stimulus
+            );
+
+
+        // -----------------------------------------------------
+        // CSV LINE
+        // -----------------------------------------------------
+
         string line =
-            sessionID + "," +
-            participantID + "," +
+            EscapeCsv(sessionID) + "," +
+            EscapeCsv(participantID) + "," +
             currentTrialNumber + "," +
-            timestamp + "," +
+            EscapeCsv(timestamp) + "," +
             elapsedTime + "," +
-            trialState + "," +
-            stimulus + "," +
-            eventType + "," +
-            intensityText + "\n";
+            EscapeCsv(readableCondition) + "," +
+            EscapeCsv(readableStimulus) + "," +
+            EscapeCsv(eventType) + "," +
+            EscapeCsv(finger) + "," +
+            EscapeCsv(motor) + "," +
+            EscapeCsv(intensityText) + "\n";
+
 
         File.AppendAllText(
             filePath,
             line
         );
     }
+
+
+    // =========================================================
+    // CSV SAFETY
+    // =========================================================
+
+    private string EscapeCsv(
+        string value
+    )
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "";
+        }
+
+        bool needsQuotes =
+            value.Contains(",") ||
+            value.Contains("\"") ||
+            value.Contains("\n") ||
+            value.Contains("\r");
+
+        if (!needsQuotes)
+        {
+            return value;
+        }
+
+        value =
+            value.Replace(
+                "\"",
+                "\"\""
+            );
+
+        return
+            "\"" +
+            value +
+            "\"";
+    }
+
+
+    // =========================================================
+    // READABLE CONDITION
+    // =========================================================
+
+    private string GetReadableCondition(
+        string trialState
+    )
+    {
+        if (string.IsNullOrEmpty(trialState))
+        {
+            return "";
+        }
+
+        switch (trialState)
+        {
+            case "VisualExploration":
+                return "Visual Exploration";
+
+            case "HapticOnly":
+                return "Haptic Only";
+
+            case "Neutral":
+                return "Neutral";
+
+            default:
+                return trialState;
+        }
+    }
+
+
+    // =========================================================
+    // READABLE STIMULUS
+    // =========================================================
+
+    private string GetReadableStimulus(
+        string stimulus
+    )
+    {
+        if (string.IsNullOrEmpty(stimulus))
+        {
+            return "";
+        }
+
+        switch (stimulus)
+        {
+            case "HapticCube_Flat":
+                return "Flat";
+
+            case "HapticCube_Ridges":
+                return "Ridges";
+
+            case "HapticCube_Bumps":
+                return "Bumps";
+
+            default:
+                return stimulus;
+        }
+    }
+
 
     // =========================================================
     // FILE INFORMATION
@@ -243,10 +466,12 @@ public class TrialLogger : MonoBehaviour
         return filePath;
     }
 
+
     public string GetSessionFolder()
     {
         return sessionFolder;
     }
+
 
     public string GetSessionID()
     {
