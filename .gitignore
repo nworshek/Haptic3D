@@ -7,6 +7,9 @@
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 
+# Generated HoloLens / UWP build
+[Uu][Ww][Pp]/
+
 # Memory captures
 [Mm]emoryCaptures/
 
@@ -43,3 +46,6 @@ sysinfo.txt
 *.apk
 *.aab
 *.unitypackage
+
+# Signing certificates
+*.pfx

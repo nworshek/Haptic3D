@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 
 public class SimulatedFingertipController : MonoBehaviour
 {
@@ -21,12 +22,30 @@ public class SimulatedFingertipController : MonoBehaviour
     public float skinWidth = 0.001f;
     public LayerMask fingertipCollisionLayers;
 
+    [Header("Shape2D Simulation")]
+    [Tooltip("Enable only for simulated Shape2D testing.")]
+    public bool constrainToShape2DPlane = false;
+
+    [Tooltip("The Shape2D interaction plane.")]
+    public Transform shape2DInteractionPlane;
+
+    [Tooltip("The actual simulated index fingertip.")]
+    public Transform shape2DTrackedFingertip;
+
+    [Tooltip("Distance from the plane where the fingertip stops.")]
+    public float shape2DPlaneOffset = 0.009f;
+
+    [Header("Temporary Remote Testing")]
+    [Tooltip("Allows the Lenovo experimenter GUI to move the simulated hand over the existing TCP connection.")]
+    public bool allowRemoteControl = true;
+
     private Rigidbody rb;
     private Transform cameraTransform;
 
     private Vector3 startCameraRelativePosition;
-    private Vector3 inputMovement;
 
+    private Vector3 inputMovement;
+    private Vector3 remoteMovement;
 
     // =========================================================
     // START
@@ -34,8 +53,7 @@ public class SimulatedFingertipController : MonoBehaviour
 
     void Start()
     {
-        rb =
-            GetComponent<Rigidbody>();
+        rb = GetComponent<Rigidbody>();
 
         if (rb == null)
         {
@@ -44,9 +62,7 @@ public class SimulatedFingertipController : MonoBehaviour
                 "FingertipManager Rigidbody is missing."
             );
 
-            enabled =
-                false;
-
+            enabled = false;
             return;
         }
 
@@ -57,9 +73,7 @@ public class SimulatedFingertipController : MonoBehaviour
                 "Main Camera could not be found."
             );
 
-            enabled =
-                false;
-
+            enabled = false;
             return;
         }
 
@@ -75,23 +89,19 @@ public class SimulatedFingertipController : MonoBehaviour
                 "must all be assigned."
             );
 
-            enabled =
-                false;
-
+            enabled = false;
             return;
         }
 
-        cameraTransform =
-            Camera.main.transform;
+        cameraTransform = Camera.main.transform;
 
-        // Save the initial position of the entire
-        // hand relative to the camera.
         startCameraRelativePosition =
             cameraTransform.InverseTransformPoint(
                 rb.position
             );
-    }
 
+        remoteMovement = Vector3.zero;
+    }
 
     // =========================================================
     // UPDATE
@@ -101,16 +111,11 @@ public class SimulatedFingertipController : MonoBehaviour
     {
         ReadInput();
 
-        if (
-            Input.GetKeyDown(
-                KeyCode.R
-            )
-        )
+        if (Input.GetKeyDown(KeyCode.R))
         {
             ResetFingertip();
         }
     }
-
 
     // =========================================================
     // FIXED UPDATE
@@ -121,93 +126,85 @@ public class SimulatedFingertipController : MonoBehaviour
         MoveHand();
     }
 
-
     // =========================================================
-    // INPUT
+    // LOCAL KEYBOARD INPUT
     // =========================================================
 
     private void ReadInput()
     {
-        inputMovement =
-            Vector3.zero;
+        inputMovement = Vector3.zero;
 
-
-        // Left
-        if (
-            Input.GetKey(
-                KeyCode.LeftArrow
-            )
-        )
+        if (Input.GetKey(KeyCode.LeftArrow))
         {
-            inputMovement.x -=
-                1f;
+            inputMovement.x -= 1f;
         }
 
-
-        // Right
-        if (
-            Input.GetKey(
-                KeyCode.RightArrow
-            )
-        )
+        if (Input.GetKey(KeyCode.RightArrow))
         {
-            inputMovement.x +=
-                1f;
+            inputMovement.x += 1f;
         }
 
-
-        // Up
-        if (
-            Input.GetKey(
-                KeyCode.UpArrow
-            )
-        )
+        if (Input.GetKey(KeyCode.UpArrow))
         {
-            inputMovement.y +=
-                1f;
+            inputMovement.y += 1f;
         }
 
-
-        // Down
-        if (
-            Input.GetKey(
-                KeyCode.DownArrow
-            )
-        )
+        if (Input.GetKey(KeyCode.DownArrow))
         {
-            inputMovement.y -=
-                1f;
+            inputMovement.y -= 1f;
         }
-
 
         // Forward
-        if (
-            Input.GetKey(
-                KeyCode.RightBracket
-            )
-        )
+        if (Input.GetKey(KeyCode.RightBracket))
         {
-            inputMovement.z +=
-                1f;
+            inputMovement.z += 1f;
         }
 
-
-        // Back
-        if (
-            Input.GetKey(
-                KeyCode.LeftBracket
-            )
-        )
+        // Backward
+        if (Input.GetKey(KeyCode.LeftBracket))
         {
-            inputMovement.z -=
-                1f;
+            inputMovement.z -= 1f;
         }
 
-
-        inputMovement =
-            inputMovement.normalized;
+        inputMovement = inputMovement.normalized;
     }
 
+    // =========================================================
+    // REMOTE MOVEMENT
+    // =========================================================
+
+    public void SetRemoteMovement(
+        float x,
+        float y,
+        float z
+    )
+    {
+        if (!allowRemoteControl)
+        {
+            remoteMovement = Vector3.zero;
+            return;
+        }
+
+        remoteMovement = new Vector3(
+            Mathf.Clamp(x, -1f, 1f),
+            Mathf.Clamp(y, -1f, 1f),
+            Mathf.Clamp(z, -1f, 1f)
+        );
+
+        if (remoteMovement.sqrMagnitude > 1f)
+        {
+            remoteMovement = remoteMovement.normalized;
+        }
+    }
+
+    // =========================================================
+    // STOP REMOTE MOVEMENT
+    // =========================================================
+
+    public void StopRemoteMovement()
+    {
+        remoteMovement = Vector3.zero;
+    }
 
     // =========================================================
     // MOVE ENTIRE HAND
@@ -220,125 +217,175 @@ public class SimulatedFingertipController : MonoBehaviour
             return;
         }
 
+        // Combine local and remote input.
+        Vector3 combinedMovement = inputMovement;
 
-        // Convert keyboard movement into camera-relative
-        // world-space movement.
+        if (allowRemoteControl)
+        {
+            combinedMovement += remoteMovement;
+        }
+
+        if (combinedMovement.sqrMagnitude > 1f)
+        {
+            combinedMovement = combinedMovement.normalized;
+        }
+
+        // Camera-relative movement.
         Vector3 worldMovement =
             cameraTransform.right *
-            inputMovement.x *
+            combinedMovement.x *
             horizontalSpeed;
-
 
         worldMovement +=
             cameraTransform.up *
-            inputMovement.y *
+            combinedMovement.y *
             verticalSpeed;
-
 
         worldMovement +=
             cameraTransform.forward *
-            inputMovement.z *
+            combinedMovement.z *
             depthSpeed;
 
-
         Vector3 movementStep =
-            worldMovement *
-            Time.fixedDeltaTime;
+            worldMovement * Time.fixedDeltaTime;
 
-
-        if (
-            movementStep.sqrMagnitude <=
-            0f
-        )
+        if (movementStep.sqrMagnitude <= 0f)
         {
             return;
         }
 
-
         Vector3 direction =
             movementStep.normalized;
-
 
         float requestedDistance =
             movementStep.magnitude;
 
+        // =====================================================
+        // COLLISION CHECK FOR ALL THREE FINGERTIPS
+        // =====================================================
 
-        // Check all fingertips.
-        // The closest collision controls how far
-        // the entire hand is allowed to move.
-        float allowedDistance =
-            requestedDistance;
+        float allowedDistance = requestedDistance;
 
+        allowedDistance = Mathf.Min(
+            allowedDistance,
+            GetAllowedDistance(
+                indexFingertip,
+                direction,
+                requestedDistance
+            )
+        );
 
-        allowedDistance =
-            Mathf.Min(
-                allowedDistance,
-                GetAllowedDistance(
-                    indexFingertip,
-                    direction,
-                    requestedDistance
-                )
-            );
+        allowedDistance = Mathf.Min(
+            allowedDistance,
+            GetAllowedDistance(
+                middleFingertip,
+                direction,
+                requestedDistance
+            )
+        );
 
-
-        allowedDistance =
-            Mathf.Min(
-                allowedDistance,
-                GetAllowedDistance(
-                    middleFingertip,
-                    direction,
-                    requestedDistance
-                )
-            );
-
-
-        allowedDistance =
-            Mathf.Min(
-                allowedDistance,
-                GetAllowedDistance(
-                    ringFingertip,
-                    direction,
-                    requestedDistance
-                )
-            );
-
+        allowedDistance = Mathf.Min(
+            allowedDistance,
+            GetAllowedDistance(
+                ringFingertip,
+                direction,
+                requestedDistance
+            )
+        );
 
         Vector3 targetPosition =
             rb.position +
-            direction *
-            allowedDistance;
+            direction * allowedDistance;
 
+        // =====================================================
+        // CAMERA DISTANCE LIMITS
+        // =====================================================
 
-        // Keep the whole hand within its allowed
-        // depth range from the camera.
         Vector3 cameraRelativePosition =
             cameraTransform.InverseTransformPoint(
                 targetPosition
             );
 
-
-        cameraRelativePosition.z =
-            Mathf.Clamp(
-                cameraRelativePosition.z,
-                minDistance,
-                maxDistance
-            );
-
+        cameraRelativePosition.z = Mathf.Clamp(
+            cameraRelativePosition.z,
+            minDistance,
+            maxDistance
+        );
 
         targetPosition =
             cameraTransform.TransformPoint(
                 cameraRelativePosition
             );
 
+        // =====================================================
+        // SHAPE2D PLANE CONSTRAINT
+        // =====================================================
 
-        rb.MovePosition(
-            targetPosition
-        );
+        if (
+            constrainToShape2DPlane &&
+            shape2DInteractionPlane != null &&
+            shape2DTrackedFingertip != null
+        )
+        {
+            // Offset between the hand Rigidbody and fingertip.
+            Vector3 fingertipOffset =
+                shape2DTrackedFingertip.position -
+                rb.position;
+
+            // Predict where the fingertip will move.
+            Vector3 proposedFingertipPosition =
+                targetPosition + fingertipOffset;
+
+            // Convert into the Shape2D plane coordinates.
+            Vector3 localFingertip =
+                shape2DInteractionPlane.InverseTransformPoint(
+                    proposedFingertipPosition
+                );
+
+            Vector3 localCamera =
+                shape2DInteractionPlane.InverseTransformPoint(
+                    cameraTransform.position
+                );
+
+            // Identify the camera-facing side of the plane.
+            float cameraSide =
+                localCamera.z >= 0f ? 1f : -1f;
+
+            // Prevent the simulated fingertip from
+            // passing through the interaction plane.
+            if (cameraSide > 0f)
+            {
+                localFingertip.z = Mathf.Max(
+                    localFingertip.z,
+                    shape2DPlaneOffset
+                );
+            }
+            else
+            {
+                localFingertip.z = Mathf.Min(
+                    localFingertip.z,
+                    -shape2DPlaneOffset
+                );
+            }
+
+            // Convert corrected position to world space.
+            Vector3 correctedFingertipPosition =
+                shape2DInteractionPlane.TransformPoint(
+                    localFingertip
+                );
+
+            // Apply the correction to the entire simulated hand.
+            targetPosition +=
+                correctedFingertipPosition -
+                proposedFingertipPosition;
+        }
+
+        // Move the hand Rigidbody.
+        rb.MovePosition(targetPosition);
     }
 
-
     // =========================================================
-    // CHECK ONE FINGERTIP
+    // CHECK COLLISION FOR ONE FINGERTIP
     // =========================================================
 
     private float GetAllowedDistance(
@@ -352,41 +399,30 @@ public class SimulatedFingertipController : MonoBehaviour
             return requestedDistance;
         }
 
-
         RaycastHit hit;
 
-
-        bool blocked =
-            Physics.SphereCast(
-                fingertip.position,
-                collisionRadius,
-                direction,
-                out hit,
-                requestedDistance +
-                skinWidth,
-                fingertipCollisionLayers,
-                QueryTriggerInteraction.Ignore
-            );
-
+        bool blocked = Physics.SphereCast(
+            fingertip.position,
+            collisionRadius,
+            direction,
+            out hit,
+            requestedDistance + skinWidth,
+            fingertipCollisionLayers,
+            QueryTriggerInteraction.Ignore
+        );
 
         if (!blocked)
         {
             return requestedDistance;
         }
 
+        float allowedDistance = Mathf.Max(
+            0f,
+            hit.distance - skinWidth
+        );
 
-        float allowedDistance =
-            Mathf.Max(
-                0f,
-                hit.distance -
-                skinWidth
-            );
-
-
-        return
-            allowedDistance;
+        return allowedDistance;
     }
-
 
     // =========================================================
     // RESET ENTIRE HAND
@@ -394,27 +430,31 @@ public class SimulatedFingertipController : MonoBehaviour
 
     public void ResetFingertip()
     {
-        if (cameraTransform == null)
+        if (cameraTransform == null || rb == null)
         {
             return;
         }
 
+        remoteMovement = Vector3.zero;
 
         Vector3 resetPosition =
             cameraTransform.TransformPoint(
                 startCameraRelativePosition
             );
 
+        rb.position = resetPosition;
 
-        rb.position =
-            resetPosition;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
 
+    // =========================================================
+    // SAFETY / DISABLE
+    // =========================================================
 
-        rb.velocity =
-            Vector3.zero;
-
-
-        rb.angularVelocity =
-            Vector3.zero;
+    void OnDisable()
+    {
+        remoteMovement = Vector3.zero;
+        inputMovement = Vector3.zero;
     }
 }

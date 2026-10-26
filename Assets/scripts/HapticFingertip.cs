@@ -22,6 +22,7 @@ public class HapticFingertip : MonoBehaviour
     public float detectionRadius = 0.020f;
 
     [Header("Visual Feedback")]
+    public Renderer visualRenderer;
     public Material idleMaterial;
     public Material contactMaterial;
 
@@ -32,7 +33,6 @@ public class HapticFingertip : MonoBehaviour
     [Header("Pulse Settings")]
     public float minimumPulseSpeed = 2f;
     public float maximumPulseSpeed = 10f;
-
     public float minimumPulseAmount = 0.02f;
     public float maximumPulseAmount = 0.20f;
 
@@ -40,6 +40,7 @@ public class HapticFingertip : MonoBehaviour
     private Vector3 originalScale;
 
     private bool isTouching = false;
+
     private float nextHapticUpdateTime = 0f;
     private int lastSentIntensity = -1;
 
@@ -47,7 +48,7 @@ public class HapticFingertip : MonoBehaviour
 
 
     // =========================================================
-    // MOTOR NUMBER
+    // MOTOR MAPPING
     // =========================================================
 
     public int GetMotorNumber()
@@ -69,10 +70,6 @@ public class HapticFingertip : MonoBehaviour
     }
 
 
-    // =========================================================
-    // MOTOR LABEL
-    // =========================================================
-
     private string GetMotorLabel()
     {
         return "M" + GetMotorNumber();
@@ -85,13 +82,26 @@ public class HapticFingertip : MonoBehaviour
 
     void Start()
     {
-        fingertipRenderer =
-            GetComponent<Renderer>();
+        if (visualRenderer != null)
+        {
+            fingertipRenderer =
+                visualRenderer;
+        }
+        else
+        {
+            fingertipRenderer =
+                GetComponent<Renderer>();
+        }
 
         originalScale =
             transform.localScale;
 
         SetIdleVisual();
+
+
+        // -----------------------------------------------------
+        // Find ESP32
+        // -----------------------------------------------------
 
         if (esp32Serial == null)
         {
@@ -106,6 +116,11 @@ public class HapticFingertip : MonoBehaviour
             );
         }
 
+
+        // -----------------------------------------------------
+        // Find TrialManager
+        // -----------------------------------------------------
+
         trialManager =
             FindObjectOfType<TrialManager>();
 
@@ -115,6 +130,7 @@ public class HapticFingertip : MonoBehaviour
                 "HapticFingertip: TrialManager could not be found."
             );
         }
+
 
         Debug.Log(
             gameObject.name +
@@ -134,11 +150,30 @@ public class HapticFingertip : MonoBehaviour
     {
         DetectHapticSurface();
 
+
         if (isTouching &&
             currentObject != null)
         {
-            UpdatePulse();
-            UpdateHapticOutput();
+            // Keep the fingertip visual at its calibrated size.
+            transform.localScale =
+                originalScale;
+
+
+            // Motor output is permitted during:
+            //
+            // 1. An ACTIVE official Haptic Only trial
+            //
+            // OR
+            //
+            // 2. Experimenter Test Mode with test haptics enabled.
+            if (HapticsAreAllowed())
+            {
+                UpdateHapticOutput();
+            }
+            else
+            {
+                EnsureMotorOff();
+            }
         }
         else
         {
@@ -149,7 +184,87 @@ public class HapticFingertip : MonoBehaviour
 
 
     // =========================================================
-    // HAPTIC SURFACE DETECTION
+    // HAPTIC PERMISSION
+    // =========================================================
+
+    private bool HapticsAreAllowed()
+    {
+        if (trialManager == null)
+        {
+            return false;
+        }
+
+
+        // -----------------------------------------------------
+        // OFFICIAL PARTICIPANT TRIAL
+        // -----------------------------------------------------
+        //
+        // Haptics are allowed during the study ONLY when:
+        //
+        // 1. A trial is actively running
+        // 2. The condition is Haptic Only
+        //
+        // This preserves the normal participant experiment
+        // behavior and prevents vibration during Visual
+        // Exploration, Neutral, or Prepared trials.
+
+        bool officialHapticTrial =
+            trialManager.trialActive &&
+            trialManager.currentState ==
+                TrialManager.TrialState.HapticOnly;
+
+
+        // -----------------------------------------------------
+        // EXPERIMENTER TEST MODE
+        // -----------------------------------------------------
+        //
+        // This is completely separate from an official trial.
+        // The experimenter must:
+        //
+        // 1. Enter Experimenter Test Mode
+        // 2. Explicitly enable Test Haptics
+        //
+        // No official trial needs to be active.
+
+        bool experimenterTesting =
+            trialManager.experimenterTestMode &&
+            trialManager.testHapticsEnabled;
+
+
+        return
+            officialHapticTrial ||
+            experimenterTesting;
+    }
+
+
+    // =========================================================
+    // ENSURE THIS MOTOR IS OFF
+    // =========================================================
+
+    private void EnsureMotorOff()
+    {
+        if (esp32Serial == null)
+        {
+            return;
+        }
+
+
+        // Only send the OFF command when necessary.
+        // This prevents sending M#:0 every frame.
+
+        if (lastSentIntensity != 0)
+        {
+            esp32Serial.MotorOff(
+                GetMotorNumber()
+            );
+
+            lastSentIntensity = 0;
+        }
+    }
+
+
+    // =========================================================
+    // DETECT HAPTIC SURFACE
     // =========================================================
 
     private void DetectHapticSurface()
@@ -162,13 +277,16 @@ public class HapticFingertip : MonoBehaviour
                 QueryTriggerInteraction.Collide
             );
 
+
         HapticObject detectedObject =
             null;
+
 
         foreach (Collider col in nearbyColliders)
         {
             HapticObject hapticObject =
                 col.GetComponentInParent<HapticObject>();
+
 
             if (hapticObject != null)
             {
@@ -178,6 +296,11 @@ public class HapticFingertip : MonoBehaviour
                 break;
             }
         }
+
+
+        // -----------------------------------------------------
+        // No object detected
+        // -----------------------------------------------------
 
         if (detectedObject == null)
         {
@@ -190,6 +313,11 @@ public class HapticFingertip : MonoBehaviour
             return;
         }
 
+
+        // -----------------------------------------------------
+        // New object detected
+        // -----------------------------------------------------
+
         if (detectedObject != currentObject)
         {
             if (isTouching &&
@@ -197,6 +325,7 @@ public class HapticFingertip : MonoBehaviour
             {
                 EndHapticContact();
             }
+
 
             BeginHapticContact(
                 detectedObject
@@ -206,7 +335,7 @@ public class HapticFingertip : MonoBehaviour
 
 
     // =========================================================
-    // CONTACT START
+    // BEGIN CONTACT
     // =========================================================
 
     private void BeginHapticContact(
@@ -222,9 +351,11 @@ public class HapticFingertip : MonoBehaviour
         lastSentIntensity =
             -1;
 
+
         currentObject.ActivateHaptics();
 
         SetContactVisual();
+
 
         Debug.Log(
             finger +
@@ -232,7 +363,13 @@ public class HapticFingertip : MonoBehaviour
             currentObject.gameObject.name
         );
 
-        if (TrialLogger.Instance != null)
+
+        // -----------------------------------------------------
+        // LOG CONTACT
+        // -----------------------------------------------------
+
+        if (TrialLogger.Instance != null &&
+            !IsExperimenterTestMode())
         {
             TrialLogger.Instance.LogEvent(
                 GetCurrentTrialState(),
@@ -244,12 +381,31 @@ public class HapticFingertip : MonoBehaviour
             );
         }
 
-        UpdateHapticOutput(true);
+
+        // -----------------------------------------------------
+        // INITIAL MOTOR OUTPUT
+        // -----------------------------------------------------
+        //
+        // HapticsAreAllowed() handles both:
+        //
+        // - Official active Haptic Only trials
+        // - Experimenter Test Mode
+
+        if (HapticsAreAllowed())
+        {
+            UpdateHapticOutput(
+                true
+            );
+        }
+        else
+        {
+            EnsureMotorOff();
+        }
     }
 
 
     // =========================================================
-    // CONTACT END
+    // END CONTACT
     // =========================================================
 
     private void EndHapticContact()
@@ -259,10 +415,17 @@ public class HapticFingertip : MonoBehaviour
             return;
         }
 
+
         string objectName =
             currentObject.gameObject.name;
 
+
         currentObject.DeactivateHaptics();
+
+
+        // -----------------------------------------------------
+        // Turn off ONLY this fingertip's motor
+        // -----------------------------------------------------
 
         if (esp32Serial != null)
         {
@@ -271,7 +434,16 @@ public class HapticFingertip : MonoBehaviour
             );
         }
 
-        if (TrialLogger.Instance != null)
+
+        // -----------------------------------------------------
+        // Log contact end
+        //
+        // Experimenter Test Mode is intentionally excluded
+        // from official participant logging.
+        // -----------------------------------------------------
+
+        if (TrialLogger.Instance != null &&
+            !IsExperimenterTestMode())
         {
             TrialLogger.Instance.LogEvent(
                 GetCurrentTrialState(),
@@ -283,11 +455,13 @@ public class HapticFingertip : MonoBehaviour
             );
         }
 
+
         Debug.Log(
             finger +
             " CONTACT END: " +
             objectName
         );
+
 
         lastSentIntensity =
             -1;
@@ -298,26 +472,44 @@ public class HapticFingertip : MonoBehaviour
         isTouching =
             false;
 
+
         transform.localScale =
             originalScale;
+
 
         SetIdleVisual();
     }
 
 
     // =========================================================
-    // HAPTIC OUTPUT
+    // UPDATE HAPTIC OUTPUT
     // =========================================================
 
     private void UpdateHapticOutput(
         bool forceUpdate = false
     )
     {
+        // -----------------------------------------------------
+        // SECONDARY SAFETY CHECK
+        // -----------------------------------------------------
+        //
+        // Even if this method is called accidentally,
+        // HapticsAreAllowed() must approve the motor output.
+
+        if (!HapticsAreAllowed())
+        {
+            EnsureMotorOff();
+
+            return;
+        }
+
+
         if (currentObject == null ||
             esp32Serial == null)
         {
             return;
         }
+
 
         if (!forceUpdate &&
             Time.time < nextHapticUpdateTime)
@@ -325,15 +517,18 @@ public class HapticFingertip : MonoBehaviour
             return;
         }
 
+
         nextHapticUpdateTime =
             Time.time +
             hapticUpdateRate;
+
 
         int newIntensity =
             currentObject
             .GetIntensityAtPosition(
                 transform.position
             );
+
 
         bool shouldSend =
             forceUpdate ||
@@ -343,17 +538,32 @@ public class HapticFingertip : MonoBehaviour
                 lastSentIntensity
             ) >= minimumIntensityChange;
 
+
         if (!shouldSend)
         {
             return;
         }
+
+
+        // -----------------------------------------------------
+        // SEND INDEPENDENT MOTOR INTENSITY
+        // -----------------------------------------------------
 
         esp32Serial.SetMotorIntensity(
             GetMotorNumber(),
             newIntensity
         );
 
-        if (TrialLogger.Instance != null)
+
+        // -----------------------------------------------------
+        // LOG HAPTIC UPDATE
+        //
+        // Experimenter Test Mode is intentionally NOT written
+        // into the official participant trial log.
+        // -----------------------------------------------------
+
+        if (TrialLogger.Instance != null &&
+            !IsExperimenterTestMode())
         {
             TrialLogger.Instance.LogEvent(
                 GetCurrentTrialState(),
@@ -365,8 +575,25 @@ public class HapticFingertip : MonoBehaviour
             );
         }
 
+
         lastSentIntensity =
             newIntensity;
+    }
+
+
+    // =========================================================
+    // EXPERIMENTER TEST MODE CHECK
+    // =========================================================
+
+    private bool IsExperimenterTestMode()
+    {
+        if (trialManager == null)
+        {
+            return false;
+        }
+
+        return
+            trialManager.experimenterTestMode;
     }
 
 
@@ -381,16 +608,19 @@ public class HapticFingertip : MonoBehaviour
             return;
         }
 
+
         int currentIntensity =
             currentObject
             .GetIntensityAtPosition(
                 transform.position
             );
 
+
         float normalizedIntensity =
             Mathf.Clamp01(
                 currentIntensity / 100f
             );
+
 
         float pulseSpeed =
             Mathf.Lerp(
@@ -399,6 +629,7 @@ public class HapticFingertip : MonoBehaviour
                 normalizedIntensity
             );
 
+
         float pulseAmount =
             Mathf.Lerp(
                 minimumPulseAmount,
@@ -406,16 +637,19 @@ public class HapticFingertip : MonoBehaviour
                 normalizedIntensity
             );
 
+
         float pulse =
             Mathf.Sin(
                 Time.time *
                 pulseSpeed
             );
 
+
         float scaleMultiplier =
             1f +
             pulse *
             pulseAmount;
+
 
         transform.localScale =
             originalScale *
@@ -424,7 +658,7 @@ public class HapticFingertip : MonoBehaviour
 
 
     // =========================================================
-    // TRIAL STATE
+    // CURRENT TRIAL STATE
     // =========================================================
 
     private string GetCurrentTrialState()
@@ -433,6 +667,13 @@ public class HapticFingertip : MonoBehaviour
         {
             return "Unknown";
         }
+
+
+        if (trialManager.experimenterTestMode)
+        {
+            return "ExperimenterTest";
+        }
+
 
         return
             trialManager
@@ -480,6 +721,7 @@ public class HapticFingertip : MonoBehaviour
             );
         }
 
+
         currentObject =
             null;
 
@@ -492,7 +734,7 @@ public class HapticFingertip : MonoBehaviour
 
 
     // =========================================================
-    // DEBUG VISUALIZATION
+    // DEBUG GIZMO
     // =========================================================
 
     private void OnDrawGizmosSelected()

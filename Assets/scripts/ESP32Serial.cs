@@ -3,14 +3,17 @@ using System;
 using System.IO.Ports;
 using System.Threading;
 
+
 public class ESP32Serial : MonoBehaviour
 {
     [Header("Serial Settings")]
     public string portName = "COM3";
     public int baudRate = 115200;
 
+
     [Header("Connection")]
     public bool connectOnStart = true;
+
 
     [Header("Motor Status")]
     [Range(0, 100)]
@@ -21,6 +24,7 @@ public class ESP32Serial : MonoBehaviour
 
     [Range(0, 100)]
     public int ringIntensity = 0;
+
 
     private SerialPort serialPort;
     private Thread readThread;
@@ -69,6 +73,7 @@ public class ESP32Serial : MonoBehaviour
             return;
         }
 
+
         try
         {
             serialPort =
@@ -77,38 +82,49 @@ public class ESP32Serial : MonoBehaviour
                     baudRate
                 );
 
+
             serialPort.ReadTimeout =
                 100;
+
 
             serialPort.WriteTimeout =
                 100;
 
+
             serialPort.NewLine =
                 "\n";
 
+
             serialPort.Open();
+
 
             Debug.Log(
                 "Connected to ESP32 on " +
                 portName
             );
 
+
             isRunning =
                 true;
+
 
             readThread =
                 new Thread(
                     ReadSerial
                 );
 
+
             readThread.IsBackground =
                 true;
 
+
             readThread.Start();
+
 
             SendCommand(
                 "PING"
             );
+
 
             // Always begin with all motors OFF.
             MotorOff();
@@ -116,6 +132,7 @@ public class ESP32Serial : MonoBehaviour
         catch (Exception e)
         {
             ResetMotorIntensities();
+
 
             Debug.LogError(
                 "Could not connect to ESP32 on " +
@@ -144,6 +161,7 @@ public class ESP32Serial : MonoBehaviour
                 {
                     string message =
                         serialPort.ReadLine();
+
 
                     if (
                         !string.IsNullOrEmpty(
@@ -183,19 +201,23 @@ public class ESP32Serial : MonoBehaviour
     {
         if (!IsConnected)
         {
-            Debug.LogWarning(
-                "ESP32 is not connected. Command not sent: " +
-                command
-            );
+            // This is expected on HoloLens.
+            //
+            // The HoloLens does not directly own the physical
+            // ESP32 serial connection. Motor intensities are
+            // still stored locally and will later be sent to
+            // the Lenovo through the TCP bridge.
 
             return;
         }
+
 
         try
         {
             serialPort.WriteLine(
                 command
             );
+
 
             Debug.Log(
                 "Sent to ESP32: " +
@@ -228,6 +250,7 @@ public class ESP32Serial : MonoBehaviour
                 100
             );
 
+
         if (
             motorNumber < 1 ||
             motorNumber > 3
@@ -238,16 +261,40 @@ public class ESP32Serial : MonoBehaviour
                 motorNumber
             );
 
+
             return;
         }
 
-        if (IsConnected)
-        {
-            SetStoredIntensity(
-                motorNumber,
-                intensity
-            );
-        }
+
+        // -----------------------------------------------------
+        // IMPORTANT:
+        //
+        // Always store the requested intensity.
+        //
+        // Previously this only happened when IsConnected was
+        // true. That worked when Unity directly owned COM3,
+        // but it prevented the HoloLens from retaining the
+        // calculated motor intensities.
+        //
+        // HoloLens now stores M1/M2/M3 even though it does not
+        // have a local ESP32 serial connection.
+        // -----------------------------------------------------
+
+        SetStoredIntensity(
+            motorNumber,
+            intensity
+        );
+
+
+        // -----------------------------------------------------
+        // LOCAL SERIAL OUTPUT
+        //
+        // If this script is running on a computer that actually
+        // owns the ESP32 serial port, this sends the command.
+        //
+        // On HoloLens there is no local serial connection, so
+        // SendCommand() safely returns without doing anything.
+        // -----------------------------------------------------
 
         SendCommand(
             "M" +
@@ -291,14 +338,19 @@ public class ESP32Serial : MonoBehaviour
                 motorNumber
             );
 
+
             return;
         }
 
+
+        // Always clear the stored intensity.
         SetStoredIntensity(
             motorNumber,
             0
         );
 
+
+        // If local serial exists, send the OFF command.
         SendCommand(
             "M" +
             motorNumber +
@@ -313,8 +365,11 @@ public class ESP32Serial : MonoBehaviour
 
     public void MotorOff()
     {
+        // Always clear all stored motor intensities.
         ResetMotorIntensities();
 
+
+        // If local serial exists, send global OFF.
         SendCommand(
             "OFF"
         );
@@ -339,12 +394,14 @@ public class ESP32Serial : MonoBehaviour
 
                 break;
 
+
             case 2:
 
                 middleIntensity =
                     intensity;
 
                 break;
+
 
             case 3:
 
@@ -365,8 +422,10 @@ public class ESP32Serial : MonoBehaviour
         indexIntensity =
             0;
 
+
         middleIntensity =
             0;
+
 
         ringIntensity =
             0;
@@ -386,11 +445,14 @@ public class ESP32Serial : MonoBehaviour
             case 1:
                 return indexIntensity;
 
+
             case 2:
                 return middleIntensity;
 
+
             case 3:
                 return ringIntensity;
+
 
             default:
                 return 0;
@@ -401,7 +463,9 @@ public class ESP32Serial : MonoBehaviour
     // =========================================================
     // GET CURRENT INTENSITY
     // =========================================================
-    // Kept so your ExperimenterTCPServer does not break.
+    //
+    // Kept so ExperimenterTCPServer continues working.
+    //
     // Returns the strongest currently active motor.
 
     public int GetCurrentIntensity()
@@ -446,10 +510,17 @@ public class ESP32Serial : MonoBehaviour
 
     public void Disconnect()
     {
+        // -----------------------------------------------------
+        // SAFETY:
+        // Always clear the locally stored haptic state.
+        // -----------------------------------------------------
+
         ResetMotorIntensities();
+
 
         isRunning =
             false;
+
 
         if (
             readThread != null &&
@@ -461,6 +532,7 @@ public class ESP32Serial : MonoBehaviour
             );
         }
 
+
         if (
             serialPort != null &&
             serialPort.IsOpen
@@ -468,16 +540,22 @@ public class ESP32Serial : MonoBehaviour
         {
             try
             {
+                // Physical ESP32 gets an OFF command before
+                // the serial connection is closed.
+
                 serialPort.WriteLine(
                     "OFF"
                 );
             }
             catch
             {
+                // Ignore shutdown write errors.
             }
+
 
             serialPort.Close();
         }
+
 
         Debug.Log(
             "ESP32 disconnected."
@@ -493,6 +571,7 @@ public class ESP32Serial : MonoBehaviour
     {
         Disconnect();
     }
+
 
     private void OnDestroy()
     {
