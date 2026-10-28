@@ -181,7 +181,7 @@ public class Shape2DTrialManager : MonoBehaviour
 
         if (trialNumber < 1 || trialNumber > TotalTrials ||
             shape != ShapeForTrial(trialNumber) ||
-            (currentTrialNumber != 0 && (currentState != TrialState.Complete || !responseRecorded || trialNumber != currentTrialNumber + 1)) ||
+            (currentTrialNumber != 0 && (currentState != TrialState.Complete || trialNumber != currentTrialNumber + 1)) ||
             (currentTrialNumber == 0 && trialNumber != 1))
         {
             Debug.LogWarning("Invalid Shape2D trial progression.");
@@ -280,6 +280,8 @@ public class Shape2DTrialManager : MonoBehaviour
 
         trialActive = false;
         currentState = TrialState.Complete;
+        // Shape identification is assessed later in the questionnaire.
+        responseRecorded = true;
 
         Debug.Log(
             "Shape2D trial ended: Trial " +
@@ -305,7 +307,7 @@ public class Shape2DTrialManager : MonoBehaviour
     {
         if (experimenterTestMode || trialActive || currentTrialNumber >= TotalTrials)
             return false;
-        if (currentTrialNumber > 0 && (currentState != TrialState.Complete || !responseRecorded))
+        if (currentTrialNumber > 0 && (currentState != TrialState.Complete))
             return false;
         int next = currentTrialNumber + 1;
         PrepareTrial(next, ShapeForTrial(next));
@@ -326,7 +328,7 @@ public class Shape2DTrialManager : MonoBehaviour
     public bool ExperimentComplete()
     {
         return currentTrialNumber == TotalTrials &&
-               currentState == TrialState.Complete && responseRecorded;
+               currentState == TrialState.Complete;
     }
 
     // =========================================================

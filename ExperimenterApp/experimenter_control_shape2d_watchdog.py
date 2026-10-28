@@ -248,9 +248,7 @@ class ExperimenterControlApp:
         ttk.Button(control_frame, text="PREPARE NEXT TRIAL", command=self.prepare_participant_trial).grid(row=0, column=0, columnspan=3, sticky="ew", padx=4, pady=4)
         ttk.Button(control_frame, text="START TRIAL", command=self.start_participant_trial).grid(row=1, column=0, sticky="ew", padx=4, pady=4)
         ttk.Button(control_frame, text="END TRIAL", command=self.end_participant_trial).grid(row=1, column=1, columnspan=2, sticky="ew", padx=4, pady=4)
-        ttk.Label(control_frame, text="Record verbal response after ending the trial:").grid(row=2, column=0, columnspan=3, sticky="w", pady=(8,2))
-        for i, shape in enumerate(("SQUARE", "CIRCLE", "TRIANGLE")):
-            ttk.Button(control_frame, text=shape, command=lambda v=shape: self.record_participant_response(v)).grid(row=3, column=i, sticky="ew", padx=4, pady=4)
+        for i in range(3):
             control_frame.columnconfigure(i, weight=1)
 
         # -------------------------------------------------
@@ -343,13 +341,6 @@ class ExperimenterControlApp:
         self.motors_off()
         if self.send_command("SHAPE2D:TRIAL:END"):
             self.participant_trial_active = False
-
-    def record_participant_response(self, shape):
-        if self.trial_status.get() != "COMPLETE":
-            messagebox.showwarning("Shape2D", "End the trial before recording the response.")
-            return
-        self.motors_off()
-        self.send_command("SHAPE2D:RESPONSE:" + shape)
 
     # =====================================================
     # SHAPE2D EXPERIMENTER TEST MODE
